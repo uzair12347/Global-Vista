@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deposit - GlobalVest Capital</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="navbar">
+  <div class="logo">GlobalVest <span>Capital</span></div>
+  <button class="btn-secondary" onclick="location.href='dashboard.html'">← Back</button>
+</div>
+
+<div class="main" style="margin-left:0;">
+  <h1 class="page-title">Deposit Funds</h1>
+  <div class="card" style="max-width:560px;">
+
+    <!-- CURRENCY SELECTOR -->
+    <div class="form-group">
+      <label>Deposit Currency</label>
+      <select id="currency" onchange="updateCurrencyInfo()">
+        <option value="PKR">PKR — Pakistani Rupee (EasyPaisa / JazzCash)</option>
+        <option value="USD">USD / USDT — US Dollar (Crypto)</option>
+      </select>
+    </div>
+
+    <!-- RATE INFO -->
+    <div id="rateInfo" style="background:#0a0e1a;border:1px solid #1f2b48;border-radius:8px;padding:10px;margin-bottom:16px;font-size:12px;color:#8b93a7;"></div>
+
+    <!-- AMOUNT -->
+    <div class="form-group">
+      <label>Amount (<span id="currLabel">PKR</span>)</label>
+      <input type="number" id="amount" placeholder="Minimum 600" oninput="updatePreview()">
+    </div>
+
+    <!-- PREVIEW -->
+    <div id="preview" style="background:#0a0e1a;border:1px solid #f0b90b55;border-radius:8px;padding:12px;margin-bottom:16px;display:none;">
+      <div style="font-size:11px;color:#8b93a7;margin-bottom:4px;">YOU WILL RECEIVE IN BALANCE</div>
+      <div style="font-size:18px;font-weight:800;color:#f0b90b;" id="previewText">PKR 0</div>
+    </div>
+
+    <!-- PAYMENT METHOD -->
+    <div class="form-group">
+      <label>Payment Method</label>
+      <select id="method">
+        <option value="EasyPaisa">EasyPaisa</option>
+        <option value="JazzCash">JazzCash</option>
+      </select>
+    </div>
+
+    <!-- COMPANY ACCOUNT -->
+    <div class="form-group">
+      <label>Company Account</label>
+      <input type="text" id="companyAcc" readonly value="03XX-XXXXXXX (EasyPaisa / JazzCash)">
+    </div>
+
+    <!-- SENDER ACCOUNT -->
+    <div class="form-group">
+      <label>Your Account Number (from which you sent)</label>
+      <input type="text" id="senderAcc" placeholder="03XXXXXXXXX">
+    </div>
+
+    <!-- TID -->
+    <div class="form-group">
+      <label>Transaction ID (TID)</label>
+      <input type="text" id="tid" placeholder="Enter TID from SMS">
+    </div>
+
+    <button class="btn-primary" style="width:100%" onclick="submitDeposit()">Submit Deposit Request</button>
+    <p id="msg" class="msg" style="margin-top:12px;"></p>
+
+    <p style="color:#8b93a7;font-size:12px;margin-top:16px;">
+      ⚠️ Complete the payment first, then submit TID. Admin will verify and credit your balance.
+    </p>
+  </div>
+</div>
+
+<script type="module">
+import { auth, db } from "./firebase-config.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { collection, addDoc, doc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { toPKR, getRate } from "./currency.js";
+
+let user = null;
+onAuthStateChanged(auth, (u) => { 
+  if (!u) return location.href = "index.html"; 
+  user = u; 
+});
+
+// Currency change — method, account, aur placeholder update
+window.updateCurrencyInfo = () => {
+  const curr = document.getElementById('currency').value;
+  const methodSel = document.getElementById('method');
+  const companyAcc = document.getElementById('companyAcc');
+  const senderLabel = document.querySelector('label[for="senderAcc"]');
+  const senderInput = document.getElementById('senderAcc');
+  const tidLabel = document.querySelector('label[for="tid"]');
+  const info = document.getElementById('rateInfo');
+  const preview = document.getElementById('preview');
+
+  preview.style.display = 'none';
+  document.getElementById('amount').value = '';
+  document.getElementById('currLabel').textContent = curr;
+
+  if (curr === 'USD') {
+    // Crypto mode — sirf USDT
+    methodSel.innerHTML = `<option value="USDT">USDT (BEP20)</option>`;
+    companyAcc.value = "0x888cd5c25360b84d42e490bf7d8f624679ad9aa3";
+    senderInput.placeholder = "Your USDT wallet address";
+    document.getElementById('amount').placeholder = "Minimum 2 USD";
+
+    // Sender label
+    senderInput.previousElementSibling.textContent = "Your USDT Wallet Address";
+
+    // TID label
+    document.getElementById('tid').previousElementSibling.textContent = "Transaction Hash (TxID)";
+    document.getElementById('tid').placeholder = "Enter blockchain TxHash";
+
+    info.innerHTML = `💱 Exchange Rate: <b style="color:#f0b90b;">1 USD = ${getRate()} PKR</b><br>`;
+  } else {
+    // PKR mode
+    methodSel.innerHTML = `
+      <option value="EasyPaisa">EasyPaisa</option>
+      <option value="JazzCash">JazzCash</option>
+    `;
+    companyAcc.value = "0332-0217021";
+    senderInput.placeholder = "";
+    document.getElementById('amount').placeholder = "Minimum 600";
+
+    senderInput.previousElementSibling.textContent = "Your Account Number (from which you sent)";
+    document.getElementById('tid').previousElementSibling.textContent = "Transaction ID (TID)";
+    document.getElementById('tid').placeholder = "Enter TID from SMS";
+
+    info.innerHTML = `💱 Amount in Pakistani Rupees. Minimum: <b style="color:#f0b90b;">PKR 600</b>`;
+  }
+};
+
+// Live preview jab user amount type kare
+window.updatePreview = () => {
+  const curr = document.getElementById('currency').value;
+  const amt = parseFloat(document.getElementById('amount').value) || 0;
+  const preview = document.getElementById('preview');
+  const previewText = document.getElementById('previewText');
+
+  if (amt <= 0) { preview.style.display = 'none'; return; }
+
+  const pkrEquivalent = toPKR(amt, curr);
+  preview.style.display = 'block';
+
+  if (curr === 'USD') {
+    previewText.innerHTML = `$${amt.toFixed(2)} <span style="color:#8b93a7;font-size:13px;">=</span> PKR ${pkrEquivalent.toLocaleString()}`;
+  } else {
+    previewText.textContent = `PKR ${pkrEquivalent.toLocaleString()}`;
+  }
+};
+
+// Submit deposit
+window.submitDeposit = async () => {
+  const currency = document.getElementById('currency').value;
+  const method = document.getElementById('method').value;
+  const amount = parseFloat(document.getElementById('amount').value);
+  const senderAcc = document.getElementById('senderAcc').value.trim();
+  const tid = document.getElementById('tid').value.trim();
+  const msg = document.getElementById('msg');
+
+  // Validation
+  const minAmount = currency === 'USD' ? 3 : 600;
+  if (!amount || amount < minAmount) {
+    msg.style.color = 'red';
+    return msg.textContent = `Minimum deposit: ${currency === 'USD' ? '$' : 'PKR '}${minAmount}`;
+  }
+  if (!senderAcc || !tid) {
+    msg.style.color = 'red';
+    return msg.textContent = currency === 'USD' 
+      ? 'Wallet address and TxHash are required' 
+      : 'Account number and TID are required';
+  }
+
+  const uSnap = await getDoc(doc(db, "users", user.uid));
+  const uData = uSnap.data();
+  const pkrAmount = toPKR(amount, currency);
+
+  await addDoc(collection(db, "deposits"), {
+    uid: user.uid,
+    userName: uData.name,
+    userPhone: uData.phone,
+    depositCurrency: currency,      // "PKR" or "USD"
+    originalAmount: amount,         // Jo user ne type kiya
+    amount: pkrAmount,              // PKR equivalent (balance me isi ko add karenge)
+    method,
+    senderAccount: senderAcc,
+    tid,
+    status: "pending",
+    createdAt: serverTimestamp()
+  });
+
+  msg.style.color = 'green';
+  msg.textContent = `Deposit request submitted! ${currency === 'USD' ? '$' : 'PKR '}${amount} — Admin will verify soon.`;
+
+  // Form reset
+  document.getElementById('amount').value = '';
+  document.getElementById('senderAcc').value = '';
+  document.getElementById('tid').value = '';
+  document.getElementById('preview').style.display = 'none';
+};
+
+// Initial state
+updateCurrencyInfo();
+</script>
+</body>
+</html>

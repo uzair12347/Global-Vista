@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Withdraw History</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<div class="navbar"><div class="logo">GlobalVest <span>Capital</span></div><button class="btn-secondary" onclick="location.href='dashboard.html'">← Back</button></div>
+<div class="main" style="margin-left:0;">
+  <h1 class="page-title">Withdraw History</h1>
+  <div class="card">
+    <table><thead><tr><th>Date</th><th>Method</th><th>Account</th><th>Amount</th><th>Status</th></tr></thead><tbody id="body"></tbody></table>
+  </div>
+</div>
+<script type="module">
+import { auth, db } from "./firebase-config.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+onAuthStateChanged(auth, async (user) => {
+  if (!user) return location.href = "index.html";
+  const q = query(collection(db, "withdrawals"), where("uid", "==", user.uid));
+  const snap = await getDocs(q);
+  const rows = snap.docs.map(d => d.data()).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+  document.getElementById('body').innerHTML = rows.length ? rows.map(d => `
+    <tr><td>${d.createdAt?.toDate?.().toLocaleString() || '-'}</td><td>${d.method}</td>
+    <td>${d.accountNumber}</td><td>PKR ${d.amount}</td>
+    <td><span class="badge ${d.status}">${d.status}</span></td></tr>
+  `).join('') : `<tr><td colspan="5" style="text-align:center;color:#8b93a7;">No withdrawals yet</td></tr>`;
+});
+</script>
+</body></html>

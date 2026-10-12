@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Invite Friends</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<div class="navbar"><div class="logo">GlobalVest <span>Capital</span></div><button class="btn-secondary" onclick="location.href='dashboard.html'">← Back</button></div>
+<div class="main" style="margin-left:0;">
+  <h1 class="page-title">Invite Friends & Earn</h1>
+  <div class="card">
+    <p style="color:#8b93a7;margin-bottom:16px;">Share your link and earn up to 17% commission on 3 levels!</p>
+    <div style="display:flex;gap:10px;margin-bottom:16px;">
+      <input type="text" id="link" readonly style="padding:12px;background:#0a0e1a;border:1px solid #1f2b48;border-radius:8px;color:#f0b90b;flex:1;">
+      <button class="btn-primary" onclick="copy()">Copy</button>
+    </div>
+    <div class="grid">
+      <div class="card"><h4 style="color:#f0b90b;">Level 1</h4><p style="color:#22c55e;font-size:22px;font-weight:800;">10%</p></div>
+      <div class="card"><h4 style="color:#94a3b8;">Level 2</h4><p style="color:#22c55e;font-size:22px;font-weight:800;">5%</p></div>
+      <div class="card"><h4 style="color:#a855f7;">Level 3</h4><p style="color:#22c55e;font-size:22px;font-weight:800;">2%</p></div>
+    </div>
+    <button class="btn-primary" style="margin-top:20px;" onclick="location.href='team.html'">View My Team →</button>
+  </div>
+</div>
+<script type="module">
+import { auth, db } from "./firebase-config.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+onAuthStateChanged(auth, async (u) => {
+  if (!u) return location.href = "index.html";
+  const d = (await getDoc(doc(db, "users", u.uid))).data();
+  document.getElementById('link').value = `${location.origin}${location.pathname.replace('invite.html','index.html')}?ref=${d.referralCode}`;
+});
+window.copy = () => { const i=document.getElementById('link'); i.select(); document.execCommand('copy'); alert('Link copied!'); };
+</script>
+</body></html>

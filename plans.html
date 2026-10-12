@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Investment Plans - GlobalVest Capital</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="navbar">
+  <div class="logo">GlobalVest <span>Capital</span></div>
+  <button class="btn-secondary" onclick="location.href='dashboard.html'">← Back</button>
+</div>
+
+<div class="main" style="margin-left:0;">
+  <h1 class="page-title">Investment Plans</h1>
+  <p style="color:#8b93a7;margin-bottom:20px;">
+    💰 Earn <b style="color:#22c55e;">10% Daily Profit</b> on every investment — the more you invest, the more you earn.
+  </p>
+  <div class="grid" id="plansGrid"></div>
+</div>
+
+<script type="module">
+import { auth, db } from "./firebase-config.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { collection, addDoc, doc, getDoc, updateDoc, increment, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+// All plans offer 10% daily profit — only min/max differ
+const PLANS = [
+  { id: "starter",  name: "Starter",  min: 600,    max: 4999,    dailyPercent: 10, days: 30, color: "#22c55e" },
+  { id: "silver",   name: "Silver",   min: 5000,   max: 19999,   dailyPercent: 10, days: 30, color: "#94a3b8" },
+  { id: "gold",     name: "Gold",     min: 20000,  max: 49999,   dailyPercent: 10, days: 30, color: "#f0b90b" },
+  { id: "platinum", name: "Platinum", min: 50000,  max: 199999,  dailyPercent: 10, days: 30, color: "#a855f7" },
+  { id: "diamond",  name: "Diamond",  min: 200000, max: 1000000, dailyPercent: 10, days: 30, color: "#06b6d4" }
+];
+
+let user = null;
+onAuthStateChanged(auth, (u) => { 
+  if (!u) return location.href = "index.html"; 
+  user = u; 
+  renderPlans(); 
+});
+
+function renderPlans() {
+  const grid = document.getElementById('plansGrid');
+  grid.innerHTML = PLANS.map(p => {
+    const exDaily = (p.min * p.dailyPercent / 100).toFixed(0);
+    const exTotal = (exDaily * p.days).toLocaleString();
+
+    return `
+    <div class="plan-card">
+      <h3 style="color:${p.color}">${p.name} Plan</h3>
+      <div class="price">PKR ${p.min.toLocaleString()} - ${p.max.toLocaleString()}</div>
+      <div class="profit" style="font-size:16px;color:#22c55e;font-weight:700;margin:8px 0;">
+        ${p.dailyPercent}% Daily Profit
+      </div>
+      <ul>
+        <li>✓ Duration: ${p.days} Days</li>
+        <li>✓ On PKR ${p.min.toLocaleString()} — <b style="color:#22c55e;">PKR ${exDaily}/day</b></li>
+        <li>✓ Total Return: PKR ${exTotal}</li>
+        <li>✓ Auto Profit Credit (Every 24h)</li>
+        <li>✓ 3-Level Referral Bonus</li>
+      </ul>
+      <button class="btn-primary" style="width:100%" onclick="buyPlan('${p.id}')">Invest Now</button>
+    </div>
+    `;
+  }).join('');
+}
+
+window.buyPlan = async (planId) => {
+  const plan = PLANS.find(p => p.id === planId);
+  const amount = prompt(`Enter investment amount:\n\nAllowed range: PKR ${plan.min.toLocaleString()} - PKR ${plan.max.toLocaleString()}`);
+  if (!amount) return;
+  const amt = parseFloat(amount);
+  if (isNaN(amt) || amt < plan.min || amt > plan.max) {
+    return alert(`Invalid amount!\n\nPlease enter an amount between PKR ${plan.min.toLocaleString()} and PKR ${plan.max.toLocaleString()}.`);
+  }
+
+  // Calculate daily profit as 10% of investment
+  const dailyProfit = parseFloat((amt * plan.dailyPercent / 100).toFixed(2));
+
+  const userSnap = await getDoc(doc(db, "users", user.uid));
+  const uData = userSnap.data();
+  if ((uData.balance || 0) < amt) {
+    return alert(`Insufficient Balance!\n\nYour Balance: PKR ${(uData.balance||0).toFixed(2)}\nRequired: PKR ${amt.toLocaleString()}\n\nPlease deposit funds to continue.`);
+  }
+
+  const now = Date.now();
+  await addDoc(collection(db, "investments"), {
+    uid: user.uid,
+    userName: uData.name,
+    userPhone: uData.phone,
+    planId: plan.id,
+    planName: plan.name,
+    amount: amt,
+    dailyPercent: plan.dailyPercent,
+    dailyProfit: dailyProfit,
+    totalPayouts: plan.days,
+    profitPaid: 0,
+    startDate: serverTimestamp(),
+    nextPayout: new Date(now + 24 * 60 * 60 * 1000),
+    status: "active"
+  });
+
+  // Deduct balance
+  await updateDoc(doc(db, "users", user.uid), { balance: increment(-amt) });
+
+  // Referral commissions
+  await distributeReferral(uData.referredBy, amt, 1);
+
+  alert(`✅ Investment Successful!\n\nPlan: ${plan.name}\nInvestment: PKR ${amt.toLocaleString()}\nDaily Profit: PKR ${dailyProfit.toLocaleString()} (10%)\n\nYour profit will be automatically credited to your balance every 24 hours.`);
+  location.href = "products.html";
+};
+
+async function distributeReferral(refUid, amount, level) {
+  if (!refUid || level > 3) return;
+  const rates = { 1: 0.10, 2: 0.05, 3: 0.02 };
+  const commission = parseFloat((amount * rates[level]).toFixed(2));
+
+  const refSnap = await getDoc(doc(db, "users", refUid));
+  if (!refSnap.exists()) return;
+  const refData = refSnap.data();
+
+  await updateDoc(doc(db, "users", refUid), {
+    balance: increment(commission),
+    totalProfit: increment(commission)
+  });
+
+  await addDoc(collection(db, "transactions"), {
+    uid: refUid, type: "referral", level, amount: commission,
+    fromUser: user.uid, status: "approved", createdAt: serverTimestamp()
+  });
+
+  if (refData.referredBy) await distributeReferral(refData.referredBy, amount, level + 1);
+}
+</script>
+</body>
+</html>

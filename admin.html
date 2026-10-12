@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Admin Panel</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<div class="navbar"><div class="logo">GlobalVest <span style="color:#ef4444">ADMIN</span></div></div>
+<div class="main" style="margin-left:0;">
+  <h1 class="page-title">Admin Panel</h1>
+  <div class="grid" style="margin-bottom:20px;">
+    <button class="btn-primary" onclick="showSection('deposits')">💰 Deposit Requests</button>
+    <button class="btn-primary" onclick="showSection('withdrawals')">🏧 Withdraw Requests</button>
+    <button class="btn-primary" onclick="showSection('users')">👥 Users</button>
+  </div>
+
+  <div class="card" id="deposits">
+    <h3 style="color:#f0b90b;margin-bottom:14px;">Pending Deposits</h3>
+    <table><thead><tr><th>User</th><th>Phone</th><th>Method</th><th>Amount</th><th>Sender Acc</th><th>TID</th><th>Action</th></tr></thead><tbody id="depBody"></tbody></table>
+  </div>
+
+  <div class="card" id="withdrawals" style="display:none;">
+    <h3 style="color:#f0b90b;margin-bottom:14px;">Pending Withdrawals</h3>
+    <table><thead><tr><th>User</th><th>Register #</th><th>Method</th><th>Account</th><th>Amount</th><th>Action</th></tr></thead><tbody id="witBody"></tbody></table>
+  </div>
+
+  <div class="card" id="users" style="display:none;">
+    <h3 style="color:#f0b90b;margin-bottom:14px;">All Users</h3>
+    <table><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Balance</th><th>Referral Code</th></tr></thead><tbody id="userBody"></tbody></table>
+  </div>
+</div>
+
+<script type="module">
+import { auth, db } from "./firebase-config.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { collection, getDocs, doc, getDoc, updateDoc, increment, deleteDoc, serverTimestamp, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+let isAdmin = false;
+onAuthStateChanged(auth, async (u) => {
+  if (!u) return location.href = "index.html";
+  const d = (await getDoc(doc(db, "users", u.uid))).data();
+  if (d.role !== "admin") return location.href = "dashboard.html";
+  isAdmin = true;
+  loadDeposits(); loadWithdrawals(); loadUsers();
+});
+
+window.showSection = (id) => {
+  ['deposits','withdrawals','users'].forEach(s => document.getElementById(s).style.display = 'none');
+  document.getElementById(id).style.display = 'block';
+};
+
+async function loadDeposits() {
+  const snap = await getDocs(collection(db, "deposits"));
+  const rows = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(d => d.status === 'pending');
+  document.getElementById('depBody').innerHTML = rows.length ? rows.map(d => `
+    <tr><td>${d.userName}</td><td>${d.userPhone}</td><td>${d.method}</td>
+    <td>PKR ${d.amount}</td><td>${d.senderAccount}</td><td>${d.tid}</td>
+    <td>
+      <button class="btn-primary" onclick="approveDeposit('${d.id}','${d.uid}',${d.amount})">Approve</button>
+      <button class="btn-secondary btn-danger" onclick="rejectDoc('deposits','${d.id}')">Reject</button>
+    </td></tr>
+  `).join('') : `<tr><td colspan="7" style="text-align:center;color:#8b93a7;">No pending deposits</td></tr>`;
+}
+
+async function loadWithdrawals() {
+  const snap = await getDocs(collection(db, "withdrawals"));
+  const rows = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(d => d.status === 'pending');
+  document.getElementById('witBody').innerHTML = rows.length ? rows.map(d => `
+    <tr><td>${d.userName}</td><td>${d.registerNumber}</td><td>${d.method}</td>
+    <td>${d.accountNumber} (${d.accountName})</td><td>
+  ${d.depositCurrency === 'USD' 
+    ? `<b style="color:#22c55e;">$${d.originalAmount}</b><br><span style="font-size:11px;color:#8b93a7;">≈ PKR ${d.amount.toLocaleString()}</span>`
+    : `PKR ${d.amount.toLocaleString()}`}
+</td>
+    <td>
+      <button class="btn-primary" onclick="approveWithdraw('${d.id}','${d.uid}',${d.amount})">Approve</button>
+      <button class="btn-secondary btn-danger" onclick="rejectDoc('withdrawals','${d.id}')">Reject</button>
+    </td></tr>
+  `).join('') : `<tr><td colspan="6" style="text-align:center;color:#8b93a7;">No pending withdrawals</td></tr>`;
+}
+
+async function loadUsers() {
+  const snap = await getDocs(collection(db, "users"));
+  document.getElementById('userBody').innerHTML = snap.docs.map(d => {
+    const u = d.data();
+    return `<tr><td>${u.name}</td><td>${u.email}</td><td>${u.phone}</td>
+      <td>PKR ${(u.balance||0).toFixed(2)}</td><td>${u.referralCode}</td></tr>`;
+  }).join('');
+}
+
+window.approveDeposit = async (id, uid, amount) => {
+  await updateDoc(doc(db, "deposits", id), { status: "approved", approvedAt: serverTimestamp() });
+  await updateDoc(doc(db, "users", uid), {
+    balance: increment(amount),
+    totalDeposit: increment(amount)
+  });
+  alert('Deposit approved & balance added!');
+  loadDeposits();
+};
+
+window.approveWithdraw = async (id, uid, amount) => {
+  await updateDoc(doc(db, "withdrawals", id), { status: "approved", approvedAt: serverTimestamp() });
+  await updateDoc(doc(db, "users", uid), {
+    balance: increment(-amount),
+    totalWithdraw: increment(amount)
+  });
+  alert('Withdraw approved!');
+  loadWithdrawals();
+};
+
+window.rejectDoc = async (coll, id) => {
+  await updateDoc(doc(db, coll, id), { status: "rejected" });
+  alert('Rejected');
+  if (coll === 'deposits') loadDeposits(); else loadWithdrawals();
+};
+</script>
+</body></html>

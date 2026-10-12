@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>My Products - GlobalVest Capital</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="navbar">
+  <div class="logo">GlobalVest <span>Capital</span></div>
+  <button class="btn-secondary" onclick="location.href='dashboard.html'">← Back</button>
+</div>
+<div class="main" style="margin-left:0;">
+  <h1 class="page-title">My Active Investments</h1>
+  <div class="card">
+    <table>
+      <thead>
+        <tr><th>Plan</th><th>Amount</th><th>Daily Profit</th><th>Paid/Total</th><th>Status</th><th>Next Payout</th></tr>
+      </thead>
+      <tbody id="productsBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script type="module">
+import { auth, db } from "./firebase-config.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) return location.href = "index.html";
+  const q = query(collection(db, "investments"), where("uid", "==", user.uid));
+  const snap = await getDocs(q);
+  const tbody = document.getElementById('productsBody');
+  if (snap.empty) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#8b93a7;">No active investments. <a href="plans.html" style="color:#f0b90b;">Buy a plan</a></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = snap.docs.map(d => {
+    const i = d.data();
+    const next = i.nextPayout?.toDate?.() || new Date();
+    return `<tr>
+      <td><b style="color:#f0b90b">${i.planName}</b></td>
+      <td>PKR ${i.amount}</td>
+      <td style="color:#22c55e">PKR ${i.dailyProfit}</td>
+      <td>${i.profitPaid}/${i.totalPayouts}</td>
+      <td><span class="badge approved">${i.status}</span></td>
+      <td>${next.toLocaleString()}</td>
+    </tr>`;
+  }).join('');
+});
+</script>
+</body>
+</html>

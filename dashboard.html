@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard - GlobalVest Capital</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="navbar">
+  <div class="logo">GlobalVest <span>Capital</span></div>
+  <div class="user-info">
+    <span id="navName">Loading...</span>
+    <button class="btn-secondary" onclick="logout()">Logout</button>
+  </div>
+</div>
+
+<div class="sidebar" id="sidebar">
+  <a href="dashboard.html" class="active">📊 Dashboard</a>
+  <a href="plans.html">💎 Investment Plans</a>
+  <a href="products.html">📦 My Products</a>
+  <a href="team.html">👥 My Team</a>
+  <a href="deposit.html">💰 Deposit</a>
+  <a href="withdraw.html">🏧 Withdraw</a>
+  <a href="deposit-history.html">📜 Deposit History</a>
+  <a href="withdraw-history.html">📜 Withdraw History</a>
+  <a href="profile.html">👤 My Profile</a>
+  <a href="invite.html">🎁 Invite Friends</a>
+  <a href="support.html">💬 Customer Service</a>
+  <a href="about.html">ℹ️ About Us</a>
+  <a href="logout.html">🚪 Logout</a>
+</div>
+
+<div class="main">
+  <h1 class="page-title">Welcome, <span id="userName">User</span> 👋</h1>
+
+  <div class="grid">
+    <div class="card balance-card">
+      <h3>Main Balance</h3>
+      <div class="amount">PKR <span id="mainBalance">0</span></div>
+    </div>
+    <div class="card">
+      <h3 style="color:#8b93a7;font-size:14px;">Total Profit</h3>
+      <div style="font-size:24px;font-weight:800;color:#22c55e;">PKR <span id="totalProfit">0</span></div>
+    </div>
+    <div class="card">
+      <h3 style="color:#8b93a7;font-size:14px;">Total Deposit</h3>
+      <div style="font-size:24px;font-weight:800;">PKR <span id="totalDeposit">0</span></div>
+    </div>
+    <div class="card">
+      <h3 style="color:#8b93a7;font-size:14px;">Total Withdraw</h3>
+      <div style="font-size:24px;font-weight:800;">PKR <span id="totalWithdraw">0</span></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:20px;">
+    <h3 style="color:#fff;margin-bottom:12px;">Your Referral Code</h3>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <input type="text" id="refCode" readonly style="padding:12px;background:#0a0e1a;border:1px solid #1f2b48;border-radius:8px;color:#f0b90b;font-weight:700;font-size:16px;flex:1;">
+      <button class="btn-primary" onclick="copyRef()">Copy</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { auth, db } from "./firebase-config.js";
+import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+let currentUser = null;
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) return location.href = "index.html";
+  currentUser = user;
+
+  // Pehle profit engine chalao
+  await checkAndAddProfits(user.uid);
+
+  // Phir updated data fetch karo
+  const snap = await getDoc(doc(db, "users", user.uid));
+  if (snap.exists()) {
+    const d = snap.data();
+    document.getElementById('navName').textContent = d.name;
+    document.getElementById('userName').textContent = d.name;
+    document.getElementById('mainBalance').textContent = (d.balance || 0).toFixed(2);
+    document.getElementById('totalProfit').textContent = (d.totalProfit || 0).toFixed(2);
+    document.getElementById('totalDeposit').textContent = (d.totalDeposit || 0).toFixed(2);
+    document.getElementById('totalWithdraw').textContent = (d.totalWithdraw || 0).toFixed(2);
+    document.getElementById('refCode').value = d.referralCode;
+  }
+});
+
+window.copyRef = () => {
+  const inp = document.getElementById('refCode');
+  inp.select();
+  document.execCommand('copy');
+  alert('Referral code copied!');
+};
+
+window.logout = async () => {
+  await signOut(auth);
+  location.href = "index.html";
+};
+
+// Auto profit engine — har 24h baad balance me add karega
+async function checkAndAddProfits(uid) {
+  try {
+    const { collection, query, where, getDocs, addDoc, updateDoc, serverTimestamp, increment } = 
+      await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+
+    const q = query(
+      collection(db, "investments"), 
+      where("uid", "==", uid), 
+      where("status", "==", "active")
+    );
+    const snap = await getDocs(q);
+    const now = Date.now();
+
+    for (const invDoc of snap.docs) {
+      const inv = invDoc.data();
+      const nextPayout = inv.nextPayout?.toMillis?.() || 0;
+      const paid = inv.profitPaid || 0;
+      const total = inv.totalPayouts || 30;
+
+      if (now >= nextPayout && paid < total) {
+        // Multi-day recovery (agar user kuch din offline raha)
+        let daysMissed = 1;
+        let nextTime = nextPayout;
+        while (nextTime + 24 * 60 * 60 * 1000 <= now && paid + daysMissed < total) {
+          daysMissed++;
+          nextTime += 24 * 60 * 60 * 1000;
+        }
+        daysMissed = Math.min(daysMissed, total - paid);
+
+        const totalProfitToAdd = parseFloat((inv.dailyProfit * daysMissed).toFixed(2));
+
+        // 1. Investment update
+        await updateDoc(doc(db, "investments", invDoc.id), {
+          profitPaid: paid + daysMissed,
+          nextPayout: new Date(nextTime + 24 * 60 * 60 * 1000),
+          lastPayout: serverTimestamp(),
+          status: (paid + daysMissed >= total) ? "completed" : "active"
+        });
+
+        // 2. User balance update
+        await updateDoc(doc(db, "users", uid), {
+          balance: increment(totalProfitToAdd),
+          totalProfit: increment(totalProfitToAdd)
+        });
+
+        // 3. Transaction record (✅ addDoc — sahi)
+        await addDoc(collection(db, "transactions"), {
+          uid,
+          type: "profit",
+          amount: totalProfitToAdd,
+          planName: inv.planName,
+          days: daysMissed,
+          dailyProfit: inv.dailyProfit,
+          status: "approved",
+          createdAt: serverTimestamp()
+        });
+      }
+    }
+  } catch (err) {
+    console.error("Profit engine error:", err);
+  }
+}
+</script>
+</body>
+</html>

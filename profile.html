@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>My Profile</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<div class="navbar"><div class="logo">GlobalVest <span>Capital</span></div><button class="btn-secondary" onclick="location.href='dashboard.html'">← Back</button></div>
+<div class="main" style="margin-left:0;">
+  <h1 class="page-title">My Profile</h1>
+  <div class="grid">
+    <div class="card balance-card"><h3>Main Balance</h3><div class="amount">PKR <span id="bal">0</span></div></div>
+    <div class="card"><h3 style="color:#8b93a7;font-size:14px;">Total Deposit</h3><div style="font-size:24px;font-weight:800;">PKR <span id="dep">0</span></div></div>
+    <div class="card"><h3 style="color:#8b93a7;font-size:14px;">Total Withdraw</h3><div style="font-size:24px;font-weight:800;">PKR <span id="wit">0</span></div></div>
+    <div class="card"><h3 style="color:#8b93a7;font-size:14px;">Total Profit</h3><div style="font-size:24px;font-weight:800;color:#22c55e;">PKR <span id="pro">0</span></div></div>
+  </div>
+  <div class="card" style="margin-top:20px;">
+    <h3 style="color:#fff;margin-bottom:14px;">Account Info</h3>
+    <p style="color:#8b93a7;margin-bottom:8px;">Name: <b style="color:#fff" id="name">-</b></p>
+    <p style="color:#8b93a7;margin-bottom:8px;">Email: <b style="color:#fff" id="email">-</b></p>
+    <p style="color:#8b93a7;margin-bottom:8px;">Phone: <b style="color:#fff" id="phone">-</b></p>
+    <p style="color:#8b93a7;margin-bottom:8px;">Referral Code: <b style="color:#f0b90b" id="ref">-</b></p>
+  </div>
+  <div style="display:flex;gap:12px;margin-top:20px;">
+    <button class="btn-primary" onclick="location.href='deposit.html'">Deposit</button>
+    <button class="btn-secondary" onclick="location.href='withdraw.html'">Withdraw</button>
+  </div>
+</div>
+<script type="module">
+import { auth, db } from "./firebase-config.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+onAuthStateChanged(auth, async (u) => {
+  if (!u) return location.href = "index.html";
+  const d = (await getDoc(doc(db, "users", u.uid))).data();
+  document.getElementById('bal').textContent = (d.balance||0).toFixed(2);
+  document.getElementById('dep').textContent = (d.totalDeposit||0).toFixed(2);
+  document.getElementById('wit').textContent = (d.totalWithdraw||0).toFixed(2);
+  document.getElementById('pro').textContent = (d.totalProfit||0).toFixed(2);
+  document.getElementById('name').textContent = d.name;
+  document.getElementById('email').textContent = d.email;
+  document.getElementById('phone').textContent = d.phone;
+  document.getElementById('ref').textContent = d.referralCode;
+});
+</script>
+</body></html>

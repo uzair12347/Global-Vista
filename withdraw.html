@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Withdraw - GlobalVest Capital</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="navbar">
+  <div class="logo">GlobalVest <span>Capital</span></div>
+  <button class="btn-secondary" onclick="location.href='dashboard.html'">← Back</button>
+</div>
+<div class="main" style="margin-left:0;">
+  <h1 class="page-title">Withdraw Funds</h1>
+  <div class="card" style="max-width:560px;">
+    <div style="margin-bottom:16px;">
+      <span style="color:#8b93a7;font-size:13px;">Available Balance</span>
+      <div style="font-size:24px;font-weight:800;color:#22c55e;">PKR <span id="bal">0</span></div>
+    </div>
+    <div class="form-group">
+      <label>Payment Method</label>
+      <select id="method">
+        <option value="EasyPaisa">EasyPaisa</option>
+        <option value="JazzCash">JazzCash</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Your Account Number</label>
+      <input type="text" id="acc" placeholder="03XXXXXXXXX">
+    </div>
+    <div class="form-group">
+      <label>Your Account Holder Name</label>
+      <input type="text" id="accName" placeholder="Full name">
+    </div>
+    <div class="form-group">
+      <label>Amount (Minimum 300)</label>
+      <input type="number" id="amount" placeholder="Minimum 300">
+    </div>
+    <button class="btn-primary" style="width:100%" onclick="submitWithdraw()">Request Withdraw</button>
+    <p id="msg" class="msg" style="margin-top:12px;"></p>
+  </div>
+</div>
+
+<script type="module">
+import { auth, db } from "./firebase-config.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { collection, addDoc, doc, getDoc, getDocs, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+let user = null;
+onAuthStateChanged(auth, async (u) => {
+  if (!u) return location.href = "index.html";
+  user = u;
+  const snap = await getDoc(doc(db, "users", u.uid));
+  document.getElementById('bal').textContent = (snap.data().balance || 0).toFixed(2);
+});
+
+window.submitWithdraw = async () => {
+  const method = document.getElementById('method').value;
+  const acc = document.getElementById('acc').value.trim();
+  const accName = document.getElementById('accName').value.trim();
+  const amount = parseFloat(document.getElementById('amount').value);
+  const msg = document.getElementById('msg');
+
+  // Check: user must have at least 1 investment
+  const invQ = query(collection(db, "investments"), where("uid", "==", user.uid));
+  const invSnap = await getDocs(invQ);
+  if (invSnap.empty) return (msg.style.color='red', msg.textContent='Pehle koi investment plan kharidein, phir withdraw karein.');
+
+  if (!amount || amount < 300) return (msg.style.color='red', msg.textContent='Minimum withdraw PKR 300');
+  if (!acc || !accName) return (msg.style.color='red', msg.textContent='Account details zaroori hain');
+
+  const uSnap = await getDoc(doc(db, "users", user.uid));
+  const uData = uSnap.data();
+  if ((uData.balance || 0) < amount) return (msg.style.color='red', msg.textContent='Insufficient balance');
+
+  await addDoc(collection(db, "withdrawals"), {
+    uid: user.uid, userName: uData.name, userPhone: uData.phone,
+    registerNumber: uData.phone,
+    method, accountNumber: acc, accountName: accName,
+    amount, status: "pending", createdAt: serverTimestamp()
+  });
+
+  msg.style.color = 'green';
+  msg.textContent = 'Withdraw request submitted! Admin will process it.';
+};
+</script>
+</body>
+</html>
