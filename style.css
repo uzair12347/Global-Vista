@@ -1,74 +1,379 @@
 * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
-body { background: #0a0e1a; color: #e5e7eb; min-height: 100vh; }
+body { background: #0a0e1a; color: #e5e7eb; min-height: 100vh; overflow-x: hidden; }
 
-/* AUTH */
-.auth-body { display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #0a0e1a 0%, #1e2a4a 100%); }
-.auth-container { width: 100%; max-width: 440px; padding: 20px; }
-.auth-box { background: #131a2e; border: 1px solid #1f2b48; border-radius: 16px; padding: 40px 30px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
-.brand { text-align: center; margin-bottom: 30px; }
-.brand h1 { font-size: 28px; color: #fff; letter-spacing: 1px; }
+/* ============ AUTH ============ */
+.auth-body { 
+  display: flex; align-items: center; justify-content: center; 
+  background: linear-gradient(135deg, #0a0e1a 0%, #1e2a4a 100%); 
+  padding: 16px;
+}
+.auth-container { width: 100%; max-width: 440px; }
+.auth-box { background: #131a2e; border: 1px solid #1f2b48; border-radius: 16px; padding: 32px 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+.brand { text-align: center; margin-bottom: 26px; }
+.brand h1 { font-size: 26px; color: #fff; letter-spacing: 1px; }
 .brand h1 span { color: #f0b90b; }
 .brand p { color: #8b93a7; font-size: 13px; margin-top: 5px; }
-.tabs { display: flex; gap: 8px; margin-bottom: 24px; background: #0a0e1a; padding: 4px; border-radius: 10px; }
-.tab { flex: 1; padding: 10px; background: transparent; border: none; color: #8b93a7; border-radius: 8px; cursor: pointer; font-weight: 600; }
+.tabs { display: flex; gap: 8px; margin-bottom: 22px; background: #0a0e1a; padding: 4px; border-radius: 10px; }
+.tab { flex: 1; padding: 11px 8px; background: transparent; border: none; color: #8b93a7; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; }
 .tab.active { background: #f0b90b; color: #0a0e1a; }
-.form { display: none; flex-direction: column; gap: 14px; }
+.form { display: none; flex-direction: column; gap: 13px; }
 .form.active { display: flex; }
-.form input { padding: 13px 16px; background: #0a0e1a; border: 1px solid #1f2b48; border-radius: 8px; color: #fff; font-size: 14px; }
+.form input { padding: 13px 16px; background: #0a0e1a; border: 1px solid #1f2b48; border-radius: 8px; color: #fff; font-size: 15px; width: 100%; }
 .form input:focus { outline: none; border-color: #f0b90b; }
 .btn-primary { padding: 13px; background: #f0b90b; color: #0a0e1a; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 15px; }
 .btn-primary:hover { background: #d9a509; }
 .msg { font-size: 13px; text-align: center; }
 
-/* DASHBOARD LAYOUT */
-.navbar { background: #131a2e; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1f2b48; position: sticky; top: 0; z-index: 100; }
-.navbar .logo { font-size: 20px; font-weight: 800; color: #fff; }
+/* ============ NAVBAR ============ */
+.navbar { 
+  background: #131a2e; padding: 12px 16px; 
+  display: flex; justify-content: space-between; align-items: center; 
+  border-bottom: 1px solid #1f2b48; position: sticky; top: 0; z-index: 100;
+}
+.navbar .logo { font-size: 18px; font-weight: 800; color: #fff; white-space: nowrap; }
 .navbar .logo span { color: #f0b90b; }
-.navbar .user-info { display: flex; align-items: center; gap: 12px; font-size: 14px; color: #8b93a7; }
+.navbar .user-info { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #8b93a7; }
+.navbar .user-info span { max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.sidebar { position: fixed; left: 0; top: 60px; width: 240px; height: calc(100vh - 60px); background: #131a2e; border-right: 1px solid #1f2b48; padding: 20px 0; overflow-y: auto; }
-.sidebar a { display: block; padding: 12px 24px; color: #8b93a7; text-decoration: none; font-size: 14px; }
-.sidebar a:hover, .sidebar a.active { background: #0a0e1a; color: #f0b90b; border-left: 3px solid #f0b90b; }
+/* Hamburger button — mobile only */
+.hamburger {
+  display: none;
+  background: transparent; border: none; color: #f0b90b;
+  font-size: 26px; cursor: pointer; padding: 4px 8px;
+}
 
-.main { margin-left: 240px; padding: 30px; margin-top: 0; }
-.page-title { font-size: 22px; color: #fff; margin-bottom: 24px; }
+/* ============ SIDEBAR ============ */
+.sidebar { 
+  position: fixed; left: 0; top: 57px; 
+  width: 240px; height: calc(100vh - 57px); 
+  background: #131a2e; border-right: 1px solid #1f2b48; 
+  padding: 16px 0; overflow-y: auto; 
+  transition: transform 0.3s ease;
+  z-index: 99;
+}
+.sidebar a { 
+  display: block; padding: 13px 22px; color: #8b93a7; 
+  text-decoration: none; font-size: 14px; 
+  border-left: 3px solid transparent;
+}
+.sidebar a:hover, .sidebar a.active { 
+  background: #0a0e1a; color: #f0b90b; 
+  border-left-color: #f0b90b;
+}
 
-/* CARDS */
-.card { background: #131a2e; border: 1px solid #1f2b48; border-radius: 12px; padding: 24px; margin-bottom: 20px; }
+/* Mobile — sidebar off-screen by default */
+.sidebar-backdrop {
+  display: none;
+  position: fixed; inset: 0; 
+  background: rgba(0,0,0,0.6); 
+  z-index: 98;
+}
+.sidebar-backdrop.active { display: block; }
+
+/* ============ MAIN ============ */
+.main { margin-left: 240px; padding: 24px 16px; min-height: calc(100vh - 57px); }
+.page-title { font-size: 22px; color: #fff; margin-bottom: 20px; }
+
+/* ============ CARDS ============ */
+.card { 
+  background: #131a2e; border: 1px solid #1f2b48; 
+  border-radius: 12px; padding: 20px; margin-bottom: 18px;
+  overflow-x: auto;
+}
 .balance-card { background: linear-gradient(135deg, #f0b90b, #d9a509); color: #0a0e1a; }
 .balance-card h3 { font-size: 14px; opacity: 0.8; margin-bottom: 8px; }
-.balance-card .amount { font-size: 32px; font-weight: 800; }
+.balance-card .amount { font-size: 28px; font-weight: 800; }
 
-.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
+/* ============ GRID ============ */
+.grid { 
+  display: grid; 
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); 
+  gap: 16px; 
+}
 
-.plan-card { background: #131a2e; border: 1px solid #1f2b48; border-radius: 12px; padding: 24px; transition: transform 0.3s; }
+/* ============ PLAN CARDS ============ */
+.plan-card { 
+  background: #131a2e; border: 1px solid #1f2b48; 
+  border-radius: 12px; padding: 20px; 
+  transition: transform 0.3s;
+}
 .plan-card:hover { transform: translateY(-4px); border-color: #f0b90b; }
-.plan-card h3 { color: #f0b90b; margin-bottom: 12px; }
-.plan-card .price { font-size: 24px; font-weight: 800; color: #fff; margin-bottom: 8px; }
+.plan-card h3 { color: #f0b90b; margin-bottom: 12px; font-size: 18px; }
+.plan-card .price { font-size: 20px; font-weight: 800; color: #fff; margin-bottom: 8px; word-break: break-word; }
 .plan-card .profit { color: #22c55e; margin-bottom: 16px; }
-.plan-card ul { list-style: none; margin-bottom: 20px; }
-.plan-card ul li { padding: 6px 0; font-size: 13px; color: #8b93a7; }
+.plan-card ul { list-style: none; margin-bottom: 18px; }
+.plan-card ul li { padding: 5px 0; font-size: 13px; color: #8b93a7; }
 
-/* TABLE */
-table { width: 100%; border-collapse: collapse; }
-th, td { padding: 12px; text-align: left; border-bottom: 1px solid #1f2b48; font-size: 14px; }
-th { color: #8b93a7; font-weight: 600; }
-.badge { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+/* ============ TABLES ============ */
+table { width: 100%; border-collapse: collapse; min-width: 560px; }
+th, td { padding: 12px 10px; text-align: left; border-bottom: 1px solid #1f2b48; font-size: 13px; }
+th { color: #8b93a7; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+.badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
 .badge.pending { background: #f59e0b33; color: #f59e0b; }
 .badge.approved { background: #22c55e33; color: #22c55e; }
 .badge.rejected { background: #ef444433; color: #ef4444; }
 
-/* FORM */
+/* ============ FORMS ============ */
 .form-group { margin-bottom: 16px; }
 .form-group label { display: block; font-size: 13px; color: #8b93a7; margin-bottom: 6px; }
-.form-group input, .form-group select { width: 100%; padding: 12px; background: #0a0e1a; border: 1px solid #1f2b48; border-radius: 8px; color: #fff; }
-.form-group input:focus, .form-group select:focus { outline: none; border-color: #f0b90b; }
+.form-group input, .form-group select { 
+  width: 100%; padding: 12px 14px; 
+  background: #0a0e1a; border: 1px solid #1f2b48; 
+  border-radius: 8px; color: #fff; font-size: 14px;
+}
+.form-group input:focus, .form-group select:focus { 
+  outline: none; border-color: #f0b90b; 
+}
 
-.btn-secondary { padding: 12px 20px; background: #1f2b48; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
+/* ============ BUTTONS ============ */
+.btn-secondary { 
+  padding: 10px 18px; background: #1f2b48; color: #fff; 
+  border: none; border-radius: 8px; cursor: pointer; 
+  font-weight: 600; font-size: 14px;
+}
 .btn-danger { background: #ef4444; color: #fff; }
 
+/* ============ MOBILE ============ */
 @media (max-width: 768px) {
-  .sidebar { transform: translateX(-100%); transition: 0.3s; }
+  /* Hamburger visible */
+  .hamburger { display: block; }
+
+  /* Sidebar off-screen — opens on hamburger click */
+  .sidebar { 
+    transform: translateX(-100%); 
+    width: 260px; 
+  }
   .sidebar.open { transform: translateX(0); }
-  .main { margin-left: 0; padding: 20px; }
+
+  /* Main full width */
+  .main { margin-left: 0; padding: 16px 12px; }
+
+  /* Navbar adjustments */
+  .navbar { padding: 10px 12px; }
+  .navbar .logo { font-size: 16px; }
+  .navbar .user-info { gap: 8px; font-size: 12px; }
+  .navbar .user-info span { max-width: 80px; }
+
+  /* Title smaller */
+  .page-title { font-size: 18px; margin-bottom: 16px; }
+
+  /* Cards padding */
+  .card { padding: 16px; border-radius: 10px; }
+  .balance-card .amount { font-size: 24px; }
+
+  /* Grid single column */
+  .grid { grid-template-columns: 1fr; gap: 12px; }
+
+  /* Plan cards full width */
+  .plan-card { padding: 18px; }
+  .plan-card .price { font-size: 18px; }
+
+  /* Tables scroll */
+  .card { overflow-x: auto; }
+  table { min-width: 500px; }
+  th, td { padding: 10px 8px; font-size: 12px; }
+
+  /* Buttons full width on mobile */
+  .btn-primary, .btn-secondary { width: 100%; padding: 12px; }
+  
+  /* Form groups */
+  .form-group { margin-bottom: 14px; }
+
+  /* Custom flex — wrap on mobile */
+  .main > div[style*="display:flex"] { flex-wrap: wrap; }
+
+  /* Referral code input */
+  input[type="text"][readonly] { font-size: 14px; }
+}
+
+/* ============ EXTRA SMALL ============ */
+@media (max-width: 480px) {
+  .brand h1 { font-size: 22px; }
+  .auth-box { padding: 24px 18px; }
+  .tab { font-size: 13px; padding: 10px 6px; }
+  .navbar .logo { font-size: 15px; }
+  .navbar .user-info span { display: none; } /* Hide name on tiny screens */
+  .page-title { font-size: 17px; }
+  .balance-card .amount { font-size: 22px; }
+}
+
+/* ============ STICKY SIDEBAR TOGGLE ============ */
+@media (max-width: 768px) {
+  body.sidebar-open { overflow: hidden; }
+}
+
+/* ==================================================
+   RESPONSIVE / MOBILE STYLES
+   ================================================== */
+
+/* Hamburger button — desktop par hidden, mobile par visible */
+.hamburger {
+  display: none;
+  background: transparent;
+  border: none;
+  color: #f0b90b;
+  font-size: 26px;
+  cursor: pointer;
+  padding: 4px 10px;
+  line-height: 1;
+  margin-right: 8px;
+}
+
+/* Sidebar backdrop — default hidden */
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.65);
+  z-index: 98;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.sidebar-backdrop.active {
+  display: block;
+  opacity: 1;
+}
+
+/* ========== MOBILE (<= 768px) ========== */
+@media (max-width: 768px) {
+
+  /* 1. Hamburger dikhao */
+  .hamburger {
+    display: block;
+  }
+
+  /* 2. Sidebar ko off-screen bhejo, slide-in ke liye ready */
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    width: 260px;
+    z-index: 999;
+    top: 57px;
+    height: calc(100vh - 57px);
+    box-shadow: 2px 0 15px rgba(0, 0, 0, 0.5);
+  }
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  /* 3. Main content full width */
+  .main {
+    margin-left: 0 !important;
+    padding: 16px 12px !important;
+    margin-top: 0;
+  }
+
+  /* 4. Navbar adjustments */
+  .navbar {
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .navbar .logo {
+    font-size: 16px;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .navbar .user-info {
+    gap: 6px;
+    font-size: 12px;
+  }
+  .navbar .user-info span {
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .navbar .btn-secondary {
+    padding: 7px 11px;
+    font-size: 12px;
+  }
+
+  /* 5. Body scroll lock jab sidebar khula ho */
+  body.sidebar-open {
+    overflow: hidden;
+  }
+
+  /* 6. Grid — single column */
+  .grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px;
+  }
+
+  /* 7. Cards */
+  .card {
+    padding: 16px !important;
+    border-radius: 10px;
+    overflow-x: auto;
+  }
+  .balance-card .amount {
+    font-size: 24px;
+  }
+
+  /* 8. Page title */
+  .page-title {
+    font-size: 18px !important;
+    margin-bottom: 14px;
+  }
+
+  /* 9. Plan cards */
+  .plan-card {
+    padding: 18px;
+  }
+  .plan-card .price {
+    font-size: 18px;
+  }
+
+  /* 10. Tables — horizontal scroll */
+  table {
+    min-width: 500px;
+    font-size: 12px;
+  }
+  th, td {
+    padding: 10px 8px;
+    font-size: 12px;
+  }
+
+  /* 11. Forms */
+  .form-group input,
+  .form-group select {
+    font-size: 14px;
+    padding: 12px;
+  }
+
+  /* 12. Buttons full width */
+  .btn-primary, .btn-secondary {
+    padding: 12px;
+  }
+
+  /* 13. Flex rows wrap */
+  .main > div[style*="display:flex"],
+  .card > div[style*="display:flex"] {
+    flex-wrap: wrap;
+  }
+}
+
+/* ========== SMALL MOBILE (<= 480px) ========== */
+@media (max-width: 480px) {
+  .navbar .logo {
+    font-size: 15px;
+  }
+  .navbar .user-info span {
+    display: none; /* Chhote phones par naam hide */
+  }
+  .page-title {
+    font-size: 17px;
+  }
+  .balance-card .amount {
+    font-size: 22px;
+  }
+  .brand h1 {
+    font-size: 22px;
+  }
+  .auth-box {
+    padding: 24px 18px;
+  }
 }
